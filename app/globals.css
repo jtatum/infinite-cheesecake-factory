@@ -77,8 +77,7 @@ body::before {
 .seed-console div { display: flex; flex: 1; flex-direction: column; gap: 7px; padding: 15px 18px; }
 .seed-console span { font: 600 8px var(--font-mono); letter-spacing: .14em; }
 .seed-console strong { font: 500 15px var(--font-display); }
-.seed-console button { border: 0; border-left: 1px solid var(--ink); padding: 0 18px; background: var(--lime); font: 600 9px var(--font-mono); letter-spacing: .09em; cursor: pointer; }
-.seed-console button:hover { background: var(--orange); color: white; }
+.seed-console small { color: rgba(36,20,38,.64); font: 500 9px/1.35 var(--font-sans); }
 .hero__stamp { position: absolute; right: 8vw; top: 19vh; display: grid; place-items: center; width: 132px; height: 132px; border: 3px double var(--wine); border-radius: 50%; color: var(--wine); transform: rotate(11deg); }
 .hero__stamp::before, .hero__stamp::after { content: "★"; position: absolute; top: 55px; font-size: 10px; }
 .hero__stamp::before { left: 16px; } .hero__stamp::after { right: 16px; }
@@ -193,7 +192,6 @@ footer p { margin: 0; }
   .hero__intro { width: 90%; margin: 4vh 0; font-size: 14px; }
   .seed-console { width: calc(100vw - 42px); margin: 0; box-shadow: 5px 5px 0 var(--wine); }
   .seed-console div { padding: 12px; }
-  .seed-console button { width: 105px; padding: 0 9px; }
   .menu-section { padding: 0 16px; }
   .menu-heading p { display: none; }
   .dish-card__body { grid-template-columns: 52px 1fr; gap: 13px; padding: 10px 0 15px; }
