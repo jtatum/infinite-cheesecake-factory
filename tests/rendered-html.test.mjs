@@ -24,7 +24,7 @@ test("server-renders the Infinite Cheesecake Factory", async () => {
   assert.match(html, /THE INFINITE/);
   assert.match(html, /CHEESECAKE FACTORY/);
   assert.match(html, /There is always/);
-  assert.match(html, /CONFUSE THE CHEF/);
+  assert.match(html, /CURRENT MENU THEME/);
   assert.match(html, /5 DISHES AT A TIME/);
   assert.doesNotMatch(html, /codex-preview|Building your site|react-loading-skeleton/i);
 });

@@ -29,6 +29,14 @@ const SEEDS = [
   "foods your future self warned you about",
 ];
 
+const LAST_SEED_KEY = "infinite-cheesecake-last-seed";
+
+function pickDifferentSeed(previous = "") {
+  const choices = SEEDS.filter((candidate) => candidate !== previous);
+  const randomIndex = window.crypto.getRandomValues(new Uint32Array(1))[0] % choices.length;
+  return choices[randomIndex];
+}
+
 function DishCard({ dish, index, onOpen, saved, onSave }: { dish: Dish; index: number; onOpen: () => void; saved: boolean; onSave: () => void }) {
   return (
     <article className="dish-card">
@@ -156,7 +164,7 @@ function DishModal({ dish, onClose, saved, onSave, onUsage }: { dish: Dish; onCl
 }
 
 export default function Home() {
-  const [seed, setSeed] = useState(SEEDS[0]);
+  const [seed, setSeed] = useState("");
   const [items, setItems] = useState<Dish[]>([]);
   const [selected, setSelected] = useState<Dish | null>(null);
   const [saved, setSaved] = useState<string[]>([]);
@@ -184,6 +192,14 @@ export default function Home() {
   }, []);
 
   useEffect(() => { void refreshAuth(); }, [refreshAuth]);
+
+  useEffect(() => {
+    let previous = "";
+    try { previous = window.localStorage.getItem(LAST_SEED_KEY) || ""; } catch { /* private browsing is allowed */ }
+    const initialSeed = pickDifferentSeed(previous);
+    setSeed(initialSeed);
+    try { window.localStorage.setItem(LAST_SEED_KEY, initialSeed); } catch { /* deliciously nonessential */ }
+  }, []);
 
   useEffect(() => {
     try {
@@ -217,6 +233,7 @@ export default function Home() {
   const loadMore = useCallback(async (activeSeed = seed, reset = false) => {
     if (loadingRef.current) return;
     if (!auth.user) return;
+    if (!activeSeed) return;
     loadingRef.current = true;
     setLoading(true);
     setMenuError(null);
@@ -264,16 +281,6 @@ export default function Home() {
     if (node.getBoundingClientRect().top <= window.innerHeight + 700) loadMore();
   }, [auth.user, items.length, loading, menuError, loadMore]);
 
-  const reroll = () => {
-    const next = SEEDS[(SEEDS.indexOf(seed) + 1 + Math.floor(Math.random() * (SEEDS.length - 1))) % SEEDS.length];
-    setSeed(next);
-    setItems([]);
-    setMenuError(null);
-    itemsLengthRef.current = 0;
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    window.setTimeout(() => loadMore(next, true), 250);
-  };
-
   const toggleSave = (id: string) => {
     setSaved((current) => {
       const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
@@ -309,8 +316,11 @@ export default function Home() {
         <h1>There is always<br /><em>one more thing</em><br />on the menu.</h1>
         <p className="hero__intro">An inexhaustible restaurant hallucination. Every dish collides two stray facts from the world and ends somewhere considerably less responsible.</p>
         <div className="seed-console">
-          <div><span>CURRENT COSMIC SEED</span><strong>“{seed}”</strong></div>
-          <button onClick={reroll}>↻ CONFUSE THE CHEF</button>
+          <div>
+            <span>CURRENT MENU THEME</span>
+            <strong>{seed ? `“${seed}”` : "Choosing a timeline…"}</strong>
+            <small>A different theme is chosen each visit. Scroll for more dishes from this one.</small>
+          </div>
         </div>
         <div className="scroll-notice"><span>SCROLL TO ORDER</span><i>↓</i></div>
         <div className="hero__stamp" aria-hidden="true"><b>OPEN</b><span>FOREVER</span></div>
