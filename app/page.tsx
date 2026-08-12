@@ -165,6 +165,7 @@ export default function Home() {
   const [menuError, setMenuError] = useState<string | null>(null);
   const [chefMode, setChefMode] = useState("CONNECTING TO GEMINI");
   const [auth, setAuth] = useState<AuthState>({ loading: true, configured: false, providers: [], user: null });
+  const isAdmin = auth.user !== null && auth.quota?.role === "admin";
   const sentinel = useRef<HTMLDivElement | null>(null);
   const loadingRef = useRef(false);
   const itemsLengthRef = useRef(items.length);
@@ -296,7 +297,7 @@ export default function Home() {
               <span className="account-chip">
                 {auth.quota?.exempt ? "★ TRUSTED GUEST" : `${auth.quota?.menu.used || 0}/${auth.quota?.menu.limit || 10} BATCHES`}
               </span>
-              {auth.quota?.role === "admin" && <a className="account-link" href="/admin">ADMIN</a>}
+              {isAdmin && <a className="account-link" href="/admin">ADMIN</a>}
               <form action="/auth/sign-out" method="post"><button className="account-link" type="submit">SIGN OUT</button></form>
             </div>
           ) : <a className="account-login" href="/auth/sign-in?provider=google&returnTo=/">SIGN IN WITH GOOGLE</a>}
