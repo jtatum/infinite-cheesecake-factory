@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { HOUSE_TOPICS, hashString, makeFallbackMenu, type Dish } from "../lib/menu";
+import type { Dish } from "../lib/menu";
 
 const SEEDS = [
   "late capitalism at brunch",
@@ -13,95 +13,6 @@ const SEEDS = [
   "1997, spiritually",
   "foods your future self warned you about",
 ];
-
-function fallbackArtwork(dish: Dish) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 900;
-  canvas.height = 900;
-  const context = canvas.getContext("2d");
-  if (!context) return "";
-  const hash = hashString(dish.id);
-  const palettes = [
-    ["#ff6b35", "#f7f0df", "#5b1038"],
-    ["#b9e769", "#ffdf4f", "#1f1638"],
-    ["#ff8fb1", "#ffd9a0", "#38523b"],
-    ["#7656a5", "#edffb3", "#ef612f"],
-  ];
-  const colors = palettes[hash % palettes.length];
-  const gradient = context.createLinearGradient(0, 0, 900, 900);
-  gradient.addColorStop(0, colors[0]);
-  gradient.addColorStop(1, colors[2]);
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, 900, 900);
-
-  for (let index = 0; index < 24; index += 1) {
-    const x = (hash * (index + 11) * 13) % 900;
-    const y = (hash * (index + 7) * 29) % 900;
-    const size = 16 + ((hash + index * 31) % 90);
-    context.globalAlpha = 0.08 + (index % 4) * 0.025;
-    context.fillStyle = index % 2 ? colors[1] : "#ffffff";
-    context.beginPath();
-    context.arc(x, y, size, 0, Math.PI * 2);
-    context.fill();
-  }
-
-  context.globalAlpha = 1;
-  context.fillStyle = "rgba(20, 11, 21, 0.22)";
-  context.beginPath();
-  context.ellipse(450, 635, 295, 76, 0, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = colors[1];
-  context.beginPath();
-  context.ellipse(450, 570, 315, 105, 0, 0, Math.PI * 2);
-  context.fill();
-  context.strokeStyle = "#2c1625";
-  context.lineWidth = 9;
-  context.stroke();
-
-  context.save();
-  context.translate(450, 450);
-  context.rotate(((hash % 15) - 7) * (Math.PI / 180));
-  context.fillStyle = "#d5964d";
-  context.beginPath();
-  context.moveTo(-225, 95);
-  context.lineTo(230, 95);
-  context.lineTo(30, 220);
-  context.lineTo(-210, 190);
-  context.closePath();
-  context.fill();
-  context.stroke();
-  context.fillStyle = "#fff4c7";
-  context.beginPath();
-  context.moveTo(-225, -55);
-  context.quadraticCurveTo(15, -135, 230, -55);
-  context.lineTo(230, 95);
-  context.quadraticCurveTo(0, 180, -225, 95);
-  context.closePath();
-  context.fill();
-  context.stroke();
-  context.fillStyle = colors[0];
-  context.beginPath();
-  context.moveTo(-225, -55);
-  context.quadraticCurveTo(15, -145, 230, -55);
-  context.quadraticCurveTo(15, 20, -225, -55);
-  context.fill();
-  context.stroke();
-  context.restore();
-
-  context.font = "152px serif";
-  context.textAlign = "center";
-  context.fillText(dish.emoji, 450, 315);
-  context.fillStyle = "#fff8df";
-  context.fillRect(44, 740, 812, 116);
-  context.fillStyle = "#241426";
-  context.font = "700 24px Arial";
-  context.textAlign = "left";
-  context.fillText("ARTIST’S RECONSTRUCTION · FACTORY ARCHIVE", 72, 786);
-  context.font = "600 20px Arial";
-  const shortName = dish.name.length > 60 ? `${dish.name.slice(0, 57)}…` : dish.name;
-  context.fillText(shortName.toUpperCase(), 72, 826);
-  return canvas.toDataURL("image/jpeg", 0.9);
-}
 
 function DishCard({ dish, index, onOpen, saved, onSave }: { dish: Dish; index: number; onOpen: () => void; saved: boolean; onSave: () => void }) {
   return (
@@ -119,9 +30,14 @@ function DishCard({ dish, index, onOpen, saved, onSave }: { dish: Dish; index: n
         <span className="dish-card__price">{dish.price}</span>
       </button>
       <div className="dish-card__footer">
-        <a href={dish.source.url} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-          SEED: {dish.source.title} ↗
-        </a>
+        <span>
+          <a href={dish.source.url} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+            SEEDS: {dish.source.title} ↗
+          </a>
+          {dish.secondarySource && <>
+            {" × "}<a href={dish.secondarySource.url} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>{dish.secondarySource.title} ↗</a>
+          </>}
+        </span>
         <button onClick={onSave}>{saved ? "★ ARCHIVED" : "☆ ARCHIVE"}</button>
       </div>
     </article>
@@ -131,7 +47,7 @@ function DishCard({ dish, index, onOpen, saved, onSave }: { dish: Dish; index: n
 function DishModal({ dish, onClose, saved, onSave }: { dish: Dish; onClose: () => void; saved: boolean; onSave: () => void }) {
   const [image, setImage] = useState<string | null>(null);
   const [status, setStatus] = useState("Consulting the forbidden pantry…");
-  const [isDemo, setIsDemo] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,18 +61,32 @@ function DishModal({ dish, onClose, saved, onSave }: { dish: Dish; onClose: () =
     fetch("/api/image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: dish.imagePrompt, name: dish.name }),
+      body: JSON.stringify({
+        prompt: dish.imagePrompt,
+        name: dish.name,
+        description: dish.description,
+        category: dish.category,
+        ingredients: dish.ingredients,
+      }),
     })
-      .then((response) => response.json())
-      .then((data: { image?: string | null; demo?: boolean }) => {
-        if (cancelled) return;
-        setIsDemo(Boolean(data.demo));
-        setImage(data.image || fallbackArtwork(dish));
+      .then(async (response) => {
+        const responseText = await response.text();
+        let data: { image?: string; error?: string };
+        try {
+          data = JSON.parse(responseText) as typeof data;
+        } catch {
+          throw new Error(`Image route returned ${response.headers.get("content-type") || "a non-JSON response"} (HTTP ${response.status}).`);
+        }
+        if (!response.ok || !data.image) throw new Error(data.error || "Runware did not return an image.");
+        return data;
       })
-      .catch(() => {
+      .then((data) => {
         if (cancelled) return;
-        setIsDemo(true);
-        setImage(fallbackArtwork(dish));
+        setImage(data.image || null);
+      })
+      .catch((error: Error) => {
+        if (cancelled) return;
+        setImageError(error.message);
       })
       .finally(() => window.clearInterval(interval));
 
@@ -178,7 +108,13 @@ function DishModal({ dish, onClose, saved, onSave }: { dish: Dish; onClose: () =
       <section className="modal__panel">
         <button className="modal__close" onClick={onClose} aria-label="Close">×</button>
         <div className="modal__art">
-          {image ? <img src={image} alt={`Generated depiction of ${dish.name}`} /> : (
+          {image ? <img src={image} alt={`Generated depiction of ${dish.name}`} /> : imageError ? (
+            <div className="developing developing--error" role="alert">
+              <span>⚠</span>
+              <strong>IMAGE KITCHEN OFFLINE</strong>
+              <p>{imageError}</p>
+            </div>
+          ) : (
             <div className="developing" role="status">
               <span>{dish.emoji}</span>
               <strong>{status}</strong>
@@ -200,7 +136,8 @@ function DishModal({ dish, onClose, saved, onSave }: { dish: Dish; onClose: () =
           </div>
           <p className="source-note">
             Dream seeded by <a href={dish.source.url} target="_blank" rel="noreferrer">{dish.source.title} ↗</a>
-            {isDemo && <span> · House reconstruction; connect the image kitchen for AI art</span>}
+            {dish.secondarySource && <> × <a href={dish.secondarySource.url} target="_blank" rel="noreferrer">{dish.secondarySource.title} ↗</a></>}
+            {image && <span> · Rendered by TwinFlow Z-Image-Turbo</span>}
           </p>
         </div>
       </section>
@@ -210,14 +147,17 @@ function DishModal({ dish, onClose, saved, onSave }: { dish: Dish; onClose: () =
 
 export default function Home() {
   const [seed, setSeed] = useState(SEEDS[0]);
-  const [items, setItems] = useState(() => makeFallbackMenu(SEEDS[0], 0));
+  const [items, setItems] = useState<Dish[]>([]);
   const [selected, setSelected] = useState<Dish | null>(null);
   const [saved, setSaved] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [chefMode, setChefMode] = useState("HOUSE CHEF");
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
+  const [menuError, setMenuError] = useState<string | null>(null);
+  const [chefMode, setChefMode] = useState("CONNECTING TO GEMINI");
   const sentinel = useRef<HTMLDivElement | null>(null);
   const loadingRef = useRef(false);
   const itemsLengthRef = useRef(items.length);
+  const visitorIdRef = useRef("");
 
   useEffect(() => {
     try {
@@ -225,26 +165,54 @@ export default function Home() {
     } catch { /* private browsing is allowed */ }
   }, []);
 
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("infinite-cheesecake-visitor");
+      const visitor = stored || window.crypto.randomUUID();
+      visitorIdRef.current = visitor;
+      if (!stored) window.localStorage.setItem("infinite-cheesecake-visitor", visitor);
+    } catch {
+      visitorIdRef.current = window.crypto.randomUUID();
+    }
+  }, []);
+
   useEffect(() => { itemsLengthRef.current = items.length; }, [items.length]);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingSeconds(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => setLoadingSeconds(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => window.clearInterval(timer);
+  }, [loading]);
 
   const loadMore = useCallback(async (activeSeed = seed, reset = false) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setLoading(true);
+    setMenuError(null);
     const offset = reset ? 0 : itemsLengthRef.current;
     try {
       const response = await fetch("/api/menu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seed: activeSeed, offset }),
+        body: JSON.stringify({ seed: activeSeed, offset, visitor: visitorIdRef.current }),
       });
-      if (!response.ok) throw new Error("The kitchen blinked");
-      const data = (await response.json()) as { dishes: Dish[]; chef: string };
-      setChefMode(data.chef === "local-llm" ? "ULTRAHORSE ONLINE" : data.chef === "openai" ? "AI CHEF ONLINE" : "HOUSE CHEF");
+      const responseText = await response.text();
+      let data: { dishes?: Dish[]; chef?: string; error?: string };
+      try {
+        data = JSON.parse(responseText) as typeof data;
+      } catch {
+        throw new Error(`Menu route returned ${response.headers.get("content-type") || "a non-JSON response"} (HTTP ${response.status}). Check the local server log.`);
+      }
+      if (!response.ok || !data.dishes) throw new Error(data.error || "The menu kitchen failed.");
+      setChefMode("GEMINI CHEF ONLINE");
       setItems((current) => reset ? data.dishes : [...current, ...data.dishes]);
-    } catch {
-      const fallback = makeFallbackMenu(activeSeed, offset);
-      setItems((current) => reset ? fallback : [...current, ...fallback]);
+    } catch (error) {
+      setChefMode("GEMINI CHEF OFFLINE");
+      setMenuError(error instanceof Error ? error.message : "The menu kitchen failed.");
     } finally {
       loadingRef.current = false;
       setLoading(false);
@@ -261,11 +229,18 @@ export default function Home() {
     return () => observer.disconnect();
   }, [loadMore]);
 
+  useEffect(() => {
+    const node = sentinel.current;
+    if (loading || menuError || items.length === 0 || !node) return;
+    if (node.getBoundingClientRect().top <= window.innerHeight + 700) loadMore();
+  }, [items.length, loading, menuError, loadMore]);
+
   const reroll = () => {
     const next = SEEDS[(SEEDS.indexOf(seed) + 1 + Math.floor(Math.random() * (SEEDS.length - 1))) % SEEDS.length];
     setSeed(next);
-    setItems(makeFallbackMenu(next, 0, 6, [...HOUSE_TOPICS].reverse()));
-    itemsLengthRef.current = 6;
+    setItems([]);
+    setMenuError(null);
+    itemsLengthRef.current = 0;
     window.scrollTo({ top: 0, behavior: "smooth" });
     window.setTimeout(() => loadMore(next, true), 250);
   };
@@ -292,7 +267,7 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero__issue">MENU ISSUE № ∞ <span>EST. AFTER TIME ENDS</span></div>
         <h1>There is always<br /><em>one more thing</em><br />on the menu.</h1>
-        <p className="hero__intro">An inexhaustible restaurant hallucination. Every dish begins with a stray fact from the world and ends somewhere considerably less responsible.</p>
+        <p className="hero__intro">An inexhaustible restaurant hallucination. Every dish collides two stray facts from the world and ends somewhere considerably less responsible.</p>
         <div className="seed-console">
           <div><span>CURRENT COSMIC SEED</span><strong>“{seed}”</strong></div>
           <button onClick={reroll}>↻ CONFUSE THE CHEF</button>
@@ -303,8 +278,8 @@ export default function Home() {
 
       <section className="menu-section" aria-label="Infinite menu">
         <div className="menu-heading">
-          <span>TONIGHT’S INFINITE SPECIALS</span>
-          <p>Prices subject to emotional availability</p>
+          <span>5 DISHES AT A TIME · 10 WIKIPEDIA CONCEPT SEEDS · REPEAT FOREVER</span>
+          <p>Next batch begins near the end</p>
         </div>
         <div className="menu-list">
           {items.map((dish, index) => (
@@ -312,7 +287,18 @@ export default function Home() {
           ))}
         </div>
         <div className="sentinel" ref={sentinel}>
-          {loading ? <><span /><p>EXTENDING THE KITCHEN…</p></> : <p>THE MENU CONTINUES</p>}
+          {loading ? <><span /><p>EXTENDING THE KITCHEN… {loadingSeconds}s</p></> : menuError ? (
+            <div className="kitchen-error" role="alert">
+              <strong>THE MENU KITCHEN IS OFFLINE</strong>
+              <p>{menuError}</p>
+              <button onClick={() => loadMore(seed, items.length === 0)}>RETRY GEMINI CHEF</button>
+            </div>
+          ) : (
+            <div className="sentinel__ready">
+              <p>THE MENU CONTINUES</p>
+              <button type="button" onClick={() => loadMore()}>LOAD FIVE MORE ↓</button>
+            </div>
+          )}
         </div>
       </section>
 

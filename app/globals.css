@@ -96,11 +96,20 @@ body::before {
 .dish-card__description { max-width: 750px; font: 400 13px/1.48 var(--font-sans); }
 .dish-card__price { justify-self: end; padding-left: 18px; text-align: right; color: var(--wine); font: 600 clamp(17px, 2.2vw, 29px)/1 var(--font-display); }
 .dish-card__footer { display: flex; justify-content: space-between; padding: 0 4px 12px 118px; font: 600 8px var(--font-mono); letter-spacing: .08em; }
+.dish-card__footer > span { max-width: 75%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dish-card__footer a { max-width: 70%; text-decoration-thickness: 1px; text-underline-offset: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dish-card__footer button { border: 0; background: transparent; font: inherit; letter-spacing: inherit; cursor: pointer; }
 .dish-card__footer button:hover { color: var(--orange); }
 .sentinel { height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; font: 600 9px var(--font-mono); letter-spacing: .14em; }
 .sentinel span { width: 38px; height: 38px; border: 1px solid var(--ink); border-top-color: var(--orange); border-radius: 50%; animation: spin 1s linear infinite; }
+.sentinel__ready { display: grid; justify-items: center; gap: 12px; }
+.sentinel__ready p { margin: 0; }
+.sentinel__ready button { padding: 11px 15px; border: 1px solid var(--ink); background: var(--wine); color: var(--cream); font: 650 9px var(--font-mono); letter-spacing: .12em; cursor: pointer; box-shadow: 4px 4px 0 var(--orange); }
+.sentinel__ready button:hover { transform: translate(-1px, -1px); box-shadow: 6px 6px 0 var(--orange); }
+.kitchen-error { display: grid; justify-items: center; gap: 9px; text-align: center; }
+.kitchen-error strong { color: var(--wine); font: 650 24px var(--font-display); }
+.kitchen-error p { margin: 0; font: 500 10px var(--font-mono); letter-spacing: 0; text-transform: none; }
+.kitchen-error button { margin-top: 8px; padding: 10px 13px; border: 1px solid var(--ink); background: var(--orange); color: white; font: 600 9px var(--font-mono); letter-spacing: .1em; cursor: pointer; }
 footer { display: flex; justify-content: space-between; padding: 25px 4vw; color: var(--cream); background: var(--wine); font: 600 9px var(--font-mono); letter-spacing: .1em; }
 footer p { margin: 0; }
 
@@ -115,6 +124,9 @@ footer p { margin: 0; }
 .developing strong { font: 500 15px var(--font-display); }
 .developing i { width: 170px; height: 3px; background: rgba(255,255,255,.2); overflow: hidden; }
 .developing i::after { content: ""; display: block; width: 40%; height: 100%; background: var(--lime); animation: scan 1.4s infinite; }
+.developing--error { padding: 35px; text-align: center; background: var(--wine); }
+.developing--error span { animation: none; }
+.developing--error p { max-width: 420px; margin: 0; font: 500 12px/1.5 var(--font-mono); }
 .modal__copy { padding: 7vh 4vw 4vh; display: flex; flex-direction: column; }
 .eyebrow { margin: 0 0 13px; color: var(--orange); font: 600 9px var(--font-mono); letter-spacing: .14em; }
 .modal h2 { margin: 0 0 22px; font: 650 clamp(38px, 5.2vw, 70px)/.88 var(--font-display); letter-spacing: -.045em; }

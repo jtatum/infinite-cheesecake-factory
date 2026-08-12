@@ -39,3 +39,7 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
+
+# intermediate corpus assembly files
+/data/corpus-part-*.json
+/data/family-*.json

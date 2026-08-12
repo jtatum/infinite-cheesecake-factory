@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "localhost:3000";
   const protocol = requestHeaders.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
   const imageUrl = `${protocol}://${host}/og.png`;
-  const description = "An endless AI-generated menu of absurd, surreal, and suspiciously specific cheesecakes.";
+  const description = "An endless AI-generated menu of absurd, surreal, and suspiciously specific restaurant dishes.";
   return {
     title: "The Infinite Cheesecake Factory",
     description,
