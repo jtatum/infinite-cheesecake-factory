@@ -1,7 +1,22 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dish } from "../lib/menu";
+
+type AuthState = {
+  loading: boolean;
+  configured: boolean;
+  providers: string[];
+  user: null | { id: string; email: string; displayName: string };
+  quota?: {
+    role: "user" | "trusted" | "admin";
+    exempt: boolean;
+    menu: { used: number; limit: number };
+    image: { used: number; limit: number };
+  };
+  error?: string;
+};
 
 const SEEDS = [
   "late capitalism at brunch",
@@ -44,7 +59,7 @@ function DishCard({ dish, index, onOpen, saved, onSave }: { dish: Dish; index: n
   );
 }
 
-function DishModal({ dish, onClose, saved, onSave }: { dish: Dish; onClose: () => void; saved: boolean; onSave: () => void }) {
+function DishModal({ dish, onClose, saved, onSave, onUsage }: { dish: Dish; onClose: () => void; saved: boolean; onSave: () => void; onUsage: () => void }) {
   const [image, setImage] = useState<string | null>(null);
   const [status, setStatus] = useState("Consulting the forbidden pantry…");
   const [imageError, setImageError] = useState<string | null>(null);
@@ -61,13 +76,7 @@ function DishModal({ dish, onClose, saved, onSave }: { dish: Dish; onClose: () =
     fetch("/api/image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt: dish.imagePrompt,
-        name: dish.name,
-        description: dish.description,
-        category: dish.category,
-        ingredients: dish.ingredients,
-      }),
+      body: JSON.stringify({ token: dish.imageToken }),
     })
       .then(async (response) => {
         const responseText = await response.text();
@@ -83,6 +92,7 @@ function DishModal({ dish, onClose, saved, onSave }: { dish: Dish; onClose: () =
       .then((data) => {
         if (cancelled) return;
         setImage(data.image || null);
+        onUsage();
       })
       .catch((error: Error) => {
         if (cancelled) return;
@@ -94,7 +104,7 @@ function DishModal({ dish, onClose, saved, onSave }: { dish: Dish; onClose: () =
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [dish]);
+  }, [dish, onUsage]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
@@ -154,10 +164,26 @@ export default function Home() {
   const [loadingSeconds, setLoadingSeconds] = useState(0);
   const [menuError, setMenuError] = useState<string | null>(null);
   const [chefMode, setChefMode] = useState("CONNECTING TO GEMINI");
+  const [auth, setAuth] = useState<AuthState>({ loading: true, configured: false, providers: [], user: null });
   const sentinel = useRef<HTMLDivElement | null>(null);
   const loadingRef = useRef(false);
   const itemsLengthRef = useRef(items.length);
   const visitorIdRef = useRef("");
+
+  const refreshAuth = useCallback(async () => {
+    try {
+      const response = await fetch("/api/auth/session", { cache: "no-store" });
+      const data = await response.json() as Omit<AuthState, "loading"> & { error?: string };
+      if (!response.ok) throw new Error(data.error || "Account service is unavailable.");
+      setAuth({ ...data, loading: false });
+      setChefMode(data.user ? "GEMINI CHEF ONLINE" : "SIGN-IN REQUIRED");
+    } catch (error) {
+      setAuth({ loading: false, configured: false, providers: [], user: null, error: error instanceof Error ? error.message : "Account service is unavailable." });
+      setChefMode("ACCOUNT SERVICE OFFLINE");
+    }
+  }, []);
+
+  useEffect(() => { void refreshAuth(); }, [refreshAuth]);
 
   useEffect(() => {
     try {
@@ -190,6 +216,7 @@ export default function Home() {
 
   const loadMore = useCallback(async (activeSeed = seed, reset = false) => {
     if (loadingRef.current) return;
+    if (!auth.user) return;
     loadingRef.current = true;
     setLoading(true);
     setMenuError(null);
@@ -208,8 +235,10 @@ export default function Home() {
         throw new Error(`Menu route returned ${response.headers.get("content-type") || "a non-JSON response"} (HTTP ${response.status}). Check the local server log.`);
       }
       if (!response.ok || !data.dishes) throw new Error(data.error || "The menu kitchen failed.");
+      const dishes = data.dishes;
       setChefMode("GEMINI CHEF ONLINE");
-      setItems((current) => reset ? data.dishes : [...current, ...data.dishes]);
+      setItems((current) => reset ? dishes : [...current, ...dishes]);
+      void refreshAuth();
     } catch (error) {
       setChefMode("GEMINI CHEF OFFLINE");
       setMenuError(error instanceof Error ? error.message : "The menu kitchen failed.");
@@ -217,7 +246,7 @@ export default function Home() {
       loadingRef.current = false;
       setLoading(false);
     }
-  }, [seed]);
+  }, [auth.user, refreshAuth, seed]);
 
   useEffect(() => {
     const node = sentinel.current;
@@ -231,9 +260,9 @@ export default function Home() {
 
   useEffect(() => {
     const node = sentinel.current;
-    if (loading || menuError || items.length === 0 || !node) return;
+    if (!auth.user || loading || menuError || items.length === 0 || !node) return;
     if (node.getBoundingClientRect().top <= window.innerHeight + 700) loadMore();
-  }, [items.length, loading, menuError, loadMore]);
+  }, [auth.user, items.length, loading, menuError, loadMore]);
 
   const reroll = () => {
     const next = SEEDS[(SEEDS.indexOf(seed) + 1 + Math.floor(Math.random() * (SEEDS.length - 1))) % SEEDS.length];
@@ -261,7 +290,18 @@ export default function Home() {
           <span>THE INFINITE<br />CHEESECAKE FACTORY</span>
         </a>
         <div className="factory-status"><i /> FACTORY RUNNING · {chefMode}</div>
-        <button className="archive-count" aria-label={`${saved.length} archived dishes`}>★ ARCHIVE <b>{String(saved.length).padStart(2, "0")}</b></button>
+        <div className="header-actions">
+          {auth.loading ? <span className="account-chip">CHECKING ACCOUNT…</span> : auth.user ? (
+            <div className="account-menu">
+              <span className="account-chip">
+                {auth.quota?.exempt ? "★ TRUSTED GUEST" : `${auth.quota?.menu.used || 0}/${auth.quota?.menu.limit || 10} BATCHES`}
+              </span>
+              {auth.quota?.role === "admin" && <a className="account-link" href="/admin">ADMIN</a>}
+              <form action="/auth/sign-out" method="post"><button className="account-link" type="submit">SIGN OUT</button></form>
+            </div>
+          ) : <a className="account-login" href="/auth/sign-in?provider=google&returnTo=/">SIGN IN WITH GOOGLE</a>}
+          <button className="archive-count" aria-label={`${saved.length} archived dishes`}>★ ARCHIVE <b>{String(saved.length).padStart(2, "0")}</b></button>
+        </div>
       </header>
 
       <section className="hero" id="top">
@@ -287,7 +327,24 @@ export default function Home() {
           ))}
         </div>
         <div className="sentinel" ref={sentinel}>
-          {loading ? <><span /><p>EXTENDING THE KITCHEN… {loadingSeconds}s</p></> : menuError ? (
+          {auth.loading ? <><span /><p>CHECKING THE GUEST LIST…</p></> : !auth.configured ? (
+            <div className="auth-gate" role="status">
+              <strong>THE GUEST LIST IS NOT CONFIGURED</strong>
+              <p>Add the Supabase project URL and publishable key to open the kitchen.</p>
+            </div>
+          ) : !auth.user ? (
+            <div className="auth-gate">
+              <strong>SIGN IN TO ENTER THE INFINITE DINING ROOM</strong>
+              <p>Every guest receives a daily menu and image allowance. No password required.</p>
+              <div className="auth-options">
+                {auth.providers.map((provider) => (
+                  <a key={provider} href={`/auth/sign-in?provider=${provider}&returnTo=/`}>
+                    CONTINUE WITH {provider.toUpperCase()}
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : loading ? <><span /><p>EXTENDING THE KITCHEN… {loadingSeconds}s</p></> : menuError ? (
             <div className="kitchen-error" role="alert">
               <strong>THE MENU KITCHEN IS OFFLINE</strong>
               <p>{menuError}</p>
@@ -307,7 +364,7 @@ export default function Home() {
         <p>No reservations. No substitutions. No discernible exit.</p>
       </footer>
 
-      {selected && <DishModal dish={selected} onClose={() => setSelected(null)} saved={saved.includes(selected.id)} onSave={() => toggleSave(selected.id)} />}
+      {selected && <DishModal dish={selected} onClose={() => setSelected(null)} saved={saved.includes(selected.id)} onSave={() => toggleSave(selected.id)} onUsage={refreshAuth} />}
     </main>
   );
 }

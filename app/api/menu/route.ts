@@ -1,5 +1,8 @@
 import type { Dish, Topic } from "../../../lib/menu";
 import wikipediaSubjects from "../../../data/wikipedia-subjects.json";
+import { getAuthenticatedUser, noStoreHeaders } from "../../../lib/auth";
+import { signDish } from "../../../lib/dish-token";
+import { reserveQuota } from "../../../lib/quota";
 
 export const runtime = "edge";
 const BATCH_SIZE = 5;
@@ -249,6 +252,29 @@ async function askGeminiChef(topicPairs: Array<[Topic, Topic]>, seed: string, of
 }
 
 export async function POST(request: Request) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return Response.json({ error: "Sign in to ask the chef for more dishes." }, { status: 401, headers: noStoreHeaders() });
+  }
+  if (!process.env.GEMINI_API_KEY || !process.env.DISH_TOKEN_SECRET) {
+    return Response.json({ error: "The menu kitchen is not fully configured." }, { status: 503, headers: noStoreHeaders() });
+  }
+
+  try {
+    const quota = await reserveQuota(user, "menu");
+    if (!quota.ok) {
+      const message = quota.reason === "global"
+        ? "The factory has reached its safety limit for today. Please return tomorrow."
+        : "You have reached today’s menu quota. It resets at midnight UTC.";
+      return Response.json({ error: message }, { status: 429, headers: noStoreHeaders({ "Retry-After": "3600" }) });
+    }
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Quota service is unavailable." },
+      { status: 503, headers: noStoreHeaders() },
+    );
+  }
+
   const body = (await request.json().catch(() => ({}))) as { seed?: string; offset?: number; visitor?: string };
   const seed = String(body.seed || "the default timeline").slice(0, 100);
   const visitor = String(body.visitor || crypto.randomUUID()).slice(0, 100);
@@ -264,13 +290,15 @@ export async function POST(request: Request) {
   const topicPairs = pairWikipediaConcepts(topics);
   const result = await askGeminiChef(topicPairs, personalizedSeed, offset, BATCH_SIZE);
   if ("error" in result) {
-    return Response.json({ error: `Gemini menu generation failed: ${result.error}.` }, { status: 502 });
+    return Response.json({ error: `Gemini menu generation failed: ${result.error}.` }, { status: 502, headers: noStoreHeaders() });
   }
 
+  const dishes = await Promise.all(result.dishes.map(async (dish) => ({ ...dish, imageToken: await signDish(dish, user.id) })));
+
   return Response.json({
-    dishes: result.dishes,
+    dishes,
     chef: "gemini",
     source: "wikipedia",
     inspirations: topics,
-  });
+  }, { headers: noStoreHeaders() });
 }

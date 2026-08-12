@@ -8,6 +8,7 @@ export type Dish = {
   emoji: string;
   ingredients: string[];
   imagePrompt: string;
+  imageToken?: string;
   source: {
     title: string;
     url: string;
