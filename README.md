@@ -77,9 +77,11 @@ Public deployments use Supabase Auth for Google sign-in and Cloudflare D1 for se
 3. Add `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `ADMIN_EMAILS`, and a random `DISH_TOKEN_SECRET` to the hosted runtime values. Keep them out of source control.
 4. Leave `AUTH_PROVIDERS=google`, or use `google,github` after enabling GitHub in Supabase.
 
-The first administrator is selected by verified email through `ADMIN_EMAILS`. After signing in, that administrator can open `/admin` and mark registered guests as **Trusted**. Trusted guests bypass the personal quota, but never the factory-wide safety limit.
+The first administrator is selected by verified email through `ADMIN_EMAILS`. After signing in, that administrator can open `/admin` and mark registered guests as **Trusted**. Trusted guests and administrators bypass both personal quotas and the factory-wide quota, so internal use does not consume public capacity.
 
 Default daily limits are 10 five-dish menu batches and 5 images per standard account, with global limits of 100 menu batches and 100 images. All four limits can be changed through the environment values documented in `.env.example`. Counters reset at midnight UTC. Quota is reserved before a provider call so concurrent requests cannot exceed the limit.
+
+The admin ledger also shows daily active generating users, successful menu batches, dishes, and images, plus per-user activity over the last 30 days. Activity is stored as daily aggregates rather than an event log and is pruned to a rolling 90-day window. Account `last_seen_at` remains separate: it records signed-in session checks, while an active analytics user must have completed at least one generation that day.
 
 ## Notes
 

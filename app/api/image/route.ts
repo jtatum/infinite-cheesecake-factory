@@ -3,6 +3,7 @@ export const runtime = "edge";
 import { getAuthenticatedUser, noStoreHeaders } from "../../../lib/auth";
 import { verifyDishToken } from "../../../lib/dish-token";
 import { reserveQuota } from "../../../lib/quota";
+import { recordGeneration } from "../../../lib/analytics";
 
 const RUNWARE_MODEL = "runware:twinflow-z-image-turbo@0";
 
@@ -92,6 +93,10 @@ export async function POST(request: Request) {
     const result = payload.data?.find((item) => item.taskType === "imageInference");
     const image = result?.imageURL || result?.imageDataURI;
     if (!image || result?.NSFWContent) throw new Error("No usable image returned");
+
+    await recordGeneration(user, "image").catch((error) => {
+      console.error("[analytics] unable to record image generation", error);
+    });
 
     return Response.json({
       image,

@@ -52,19 +52,21 @@ function database() {
 
 export async function syncUser(user: AuthenticatedUser) {
   const db = database();
+  const bootstrapRole: UserRole = isBootstrapAdmin(user.email) ? "admin" : "user";
   await db.prepare(`
     INSERT INTO users (id, email, role, created_at, last_seen_at)
-    VALUES (?, ?, 'user', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO UPDATE SET
       email = excluded.email,
+      role = CASE WHEN excluded.role = 'admin' THEN 'admin' ELSE users.role END,
       last_seen_at = CURRENT_TIMESTAMP
-  `).bind(user.id, user.email).run();
+  `).bind(user.id, user.email, bootstrapRole).run();
 
   const row = await db.prepare(
     "SELECT id, email, role, created_at, last_seen_at FROM users WHERE id = ?"
   ).bind(user.id).first<UserRow>();
   if (!row) throw new Error("Unable to create the user record.");
-  return { ...row, role: isBootstrapAdmin(user.email) ? "admin" as const : row.role };
+  return row;
 }
 
 export async function usageSnapshot(user: AuthenticatedUser) {
@@ -112,9 +114,7 @@ async function reserveUser(userId: string, kind: QuotaKind) {
 export async function reserveQuota(user: AuthenticatedUser, kind: QuotaKind) {
   const profile = await syncUser(user);
   if (profile.role === "trusted" || profile.role === "admin") {
-    const global = await reserveGlobal(kind);
-    if (!global.ok) return { ...global, reason: "global" as const };
-    return { ok: true as const, exempt: true, role: profile.role, global };
+    return { ok: true as const, exempt: true, role: profile.role };
   }
 
   const personal = await reserveUser(user.id, kind);
