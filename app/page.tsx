@@ -302,7 +302,7 @@ export default function Home() {
           {auth.loading ? <span className="account-chip">CHECKING ACCOUNT…</span> : auth.user ? (
             <div className="account-menu">
               <span className="account-chip">
-                {auth.quota?.exempt ? "★ TRUSTED GUEST" : `${auth.quota?.menu.used || 0}/${auth.quota?.menu.limit || 10} BATCHES`}
+                {auth.quota?.role === "admin" ? "★ ADMINISTRATOR" : auth.quota?.exempt ? "★ TRUSTED GUEST" : `${auth.quota?.menu.used || 0}/${auth.quota?.menu.limit || 10} BATCHES`}
               </span>
               {isAdmin && <a className="account-link" href="/admin">ADMIN</a>}
               <form action="/auth/sign-out" method="post"><button className="account-link" type="submit">SIGN OUT</button></form>

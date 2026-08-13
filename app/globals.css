@@ -158,11 +158,29 @@ footer p { margin: 0; }
 .admin-page { min-height: 100vh; background: var(--cream); }
 .admin-header { display: flex; justify-content: space-between; padding: 22px 4vw; color: var(--cream); background: var(--wine); font: 600 9px var(--font-mono); letter-spacing: .12em; }
 .admin-header a { text-underline-offset: 4px; }
-.admin-sheet { width: min(1080px, 92vw); margin: 7vh auto; padding: clamp(25px, 5vw, 65px); border: 1px solid var(--ink); box-shadow: 12px 12px 0 var(--orange); background: var(--paper); }
+.admin-sheet { width: min(1180px, 92vw); margin: 7vh auto; padding: clamp(25px, 5vw, 65px); border: 1px solid var(--ink); box-shadow: 12px 12px 0 var(--orange); background: var(--paper); }
 .admin-sheet h1 { margin: 0 0 14px; color: var(--wine); font: 650 clamp(48px, 8vw, 90px)/.9 var(--font-display); letter-spacing: -.05em; }
 .admin-sheet > p:not(.eyebrow) { max-width: 690px; margin: 0 0 35px; font: 400 14px/1.55 var(--font-sans); }
 .admin-message { padding: 28px; border: 1px solid var(--ink); background: var(--lime); font: 600 10px var(--font-mono); letter-spacing: .1em; text-align: center; }
 .admin-message--error { color: white; background: var(--wine); }
+.metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--ink); background: var(--ink); gap: 1px; }
+.metric-grid > div { min-height: 142px; padding: 20px; background: var(--cream); }
+.metric-grid span, .metric-grid small { display: block; font: 650 8px/1.4 var(--font-mono); letter-spacing: .1em; }
+.metric-grid strong { display: block; margin: 17px 0 7px; color: var(--wine); font: 650 clamp(31px, 4vw, 48px)/.8 var(--font-display); letter-spacing: -.04em; }
+.metric-grid small { color: rgba(36,20,38,.58); letter-spacing: 0; }
+.analytics-section { margin-top: 58px; }
+.admin-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; margin-bottom: 16px; }
+.admin-section-heading .eyebrow { margin-bottom: 6px; }
+.admin-section-heading h2 { margin: 0; color: var(--wine); font: 650 clamp(28px, 4vw, 43px)/1 var(--font-display); letter-spacing: -.03em; }
+.admin-section-heading > p { max-width: 360px; margin: 0; color: rgba(36,20,38,.65); font: 500 9px/1.5 var(--font-mono); text-align: right; }
+.activity-table, .active-user-table { border-top: 4px double var(--ink); }
+.activity-row { display: grid; grid-template-columns: 85px 55px minmax(110px, 1fr) 70px 70px; gap: 16px; align-items: center; min-height: 38px; padding: 6px 5px; border-bottom: 1px solid var(--line); font: 500 10px var(--font-mono); }
+.activity-row--heading, .active-user-row--heading { font-size: 8px; font-weight: 700; letter-spacing: .12em; }
+.activity-bar { height: 8px; overflow: hidden; background: rgba(36,20,38,.1); }
+.activity-bar i { display: block; height: 100%; min-width: 1px; background: var(--orange); }
+.active-user-row { display: grid; grid-template-columns: minmax(220px, 1.4fr) minmax(140px, .8fr) 55px 70px 70px; gap: 18px; align-items: center; min-height: 48px; padding: 8px 5px; border-bottom: 1px solid var(--line); font: 500 10px var(--font-mono); }
+.active-user-row strong, .active-user-row small { display: block; }
+.active-user-row small { margin-top: 4px; color: rgba(36,20,38,.52); font-size: 8px; text-transform: uppercase; }
 .user-table { border-top: 4px double var(--ink); }
 .user-row { display: grid; grid-template-columns: minmax(240px, 1.5fr) .6fr minmax(150px, .7fr); gap: 20px; align-items: center; padding: 14px 5px; border-bottom: 1px solid var(--line); font: 500 11px var(--font-mono); }
 .user-row--heading { padding-top: 20px; font-size: 8px; font-weight: 700; letter-spacing: .12em; }
@@ -210,6 +228,13 @@ footer p { margin: 0; }
   footer p { margin-top: 5px; }
   .admin-header span { display: none; }
   .admin-sheet { margin: 25px auto; padding: 23px 17px; box-shadow: 7px 7px 0 var(--orange); }
+  .metric-grid { grid-template-columns: 1fr 1fr; }
+  .metric-grid > div { min-height: 120px; padding: 16px; }
+  .admin-section-heading { display: block; }
+  .admin-section-heading > p { margin-top: 8px; text-align: left; }
+  .activity-row { grid-template-columns: 65px 42px 1fr 50px 50px; gap: 7px; font-size: 9px; }
+  .active-user-row { grid-template-columns: 1fr 70px 45px; gap: 8px; }
+  .active-user-row > span:nth-child(2), .active-user-row > span:nth-child(3) { display: none; }
   .user-row { grid-template-columns: 1fr; gap: 9px; }
   .user-row--heading { display: none; }
 }

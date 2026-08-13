@@ -3,6 +3,7 @@ import wikipediaSubjects from "../../../data/wikipedia-subjects.json";
 import { getAuthenticatedUser, noStoreHeaders } from "../../../lib/auth";
 import { signDish } from "../../../lib/dish-token";
 import { reserveQuota } from "../../../lib/quota";
+import { recordGeneration } from "../../../lib/analytics";
 
 export const runtime = "edge";
 const BATCH_SIZE = 5;
@@ -294,6 +295,10 @@ export async function POST(request: Request) {
   }
 
   const dishes = await Promise.all(result.dishes.map(async (dish) => ({ ...dish, imageToken: await signDish(dish, user.id) })));
+
+  await recordGeneration(user, "menu", dishes.length).catch((error) => {
+    console.error("[analytics] unable to record menu generation", error);
+  });
 
   return Response.json({
     dishes,
