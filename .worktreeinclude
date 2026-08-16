@@ -1,0 +1,2 @@
+# Gitignored local configuration required to run the app.
+.env.local
