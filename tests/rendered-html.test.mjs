@@ -48,6 +48,7 @@ test("keeps credentials server-side and ships the baked corpus", async () => {
 
 test("decodes character references emitted by the menu model", () => {
   assert.equal(decodeHtmlCharacterReferences("Thermal Rise Paradox Flamb&eacute;"), "Thermal Rise Paradox Flambé");
+  assert.equal(decodeHtmlCharacterReferences("Cr&egrave;me Br&ucirc;l&eacute;e &amp; jalape&ntilde;o"), "Crème Brûlée & jalapeño");
   assert.equal(decodeHtmlCharacterReferences("Salt &amp; pepper &#215; caf&#xE9;"), "Salt & pepper × café");
   assert.equal(decodeHtmlCharacterReferences("Keep &notARealEntity; literal"), "Keep &notARealEntity; literal");
 });
