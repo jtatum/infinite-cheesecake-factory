@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { decodeHtmlCharacterReferences } from "../lib/html-text.ts";
 
 async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -43,4 +44,10 @@ test("keeps credentials server-side and ships the baked corpus", async () => {
   assert.match(imageRoute, /process\.env\.RUNWARE_API_KEY/);
   assert.match(envExample, /GEMINI_MODEL=gemini-3\.1-flash-lite/);
   assert.equal(JSON.parse(corpus).length, 1000);
+});
+
+test("decodes character references emitted by the menu model", () => {
+  assert.equal(decodeHtmlCharacterReferences("Thermal Rise Paradox Flamb&eacute;"), "Thermal Rise Paradox Flambé");
+  assert.equal(decodeHtmlCharacterReferences("Salt &amp; pepper &#215; caf&#xE9;"), "Salt & pepper × café");
+  assert.equal(decodeHtmlCharacterReferences("Keep &notARealEntity; literal"), "Keep &notARealEntity; literal");
 });

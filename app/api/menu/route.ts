@@ -2,6 +2,7 @@ import type { Dish, Topic } from "../../../lib/menu";
 import wikipediaSubjects from "../../../data/wikipedia-subjects.json";
 import { getAuthenticatedUser, noStoreHeaders } from "../../../lib/auth";
 import { signDish } from "../../../lib/dish-token";
+import { decodeHtmlCharacterReferences } from "../../../lib/html-text";
 import { reserveQuota } from "../../../lib/quota";
 
 export const runtime = "edge";
@@ -90,6 +91,8 @@ Descriptions should be 16–28 words of dead-serious glossy menu copy, and must 
 
 imagePrompt is crucial: write one vivid photographic sentence showing this exact dish. Describe its food form, colors, plating, and at least THREE conspicuous impossible details made entirely from edible materials or arrangements. Translate concepts into visible physical forms: a voicemail reduction becomes glossy sauce piped as sound-wave arcs; telecom pasta tangles into edible coiled cables around a wafer receiver; a migration salad visibly marches across several plates in seasonal formations. Never rely on the dish name, invisible flavor, ordinary ingredients, typography, letters, signage, or captions to communicate the concept.
 
+Use literal UTF-8 characters in every string. Never use HTML character references such as &eacute;, &amp;, or &#233;.
+
 Return ONLY valid JSON shaped exactly like {"dishes":[{"name":string,"description":string,"price":string,"category":string,"warning":string,"emoji":string,"ingredients":string[3],"imagePrompt":string}]}.`;
 
 function menuResponseFormat(count: number) {
@@ -140,7 +143,14 @@ function topicSource(topic: Topic) {
 function finishDishes(dishes: ChefDish[], topicPairs: Array<[Topic, Topic]>, offset: number, expectedCount: number) {
   if (!Array.isArray(dishes) || dishes.length !== expectedCount) return null;
   return dishes.map((dish, index) => ({
-    ...dish,
+    name: decodeHtmlCharacterReferences(dish.name),
+    description: decodeHtmlCharacterReferences(dish.description),
+    price: decodeHtmlCharacterReferences(dish.price),
+    category: decodeHtmlCharacterReferences(dish.category),
+    warning: decodeHtmlCharacterReferences(dish.warning),
+    emoji: decodeHtmlCharacterReferences(dish.emoji),
+    ingredients: dish.ingredients.map(decodeHtmlCharacterReferences),
+    imagePrompt: decodeHtmlCharacterReferences(dish.imagePrompt),
     id: `ai-${offset + index}-${Math.random().toString(36).slice(2, 8)}`,
     source: topicSource(topicPairs[index][0]),
     secondarySource: topicSource(topicPairs[index][1]),
